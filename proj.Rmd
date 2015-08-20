@@ -85,7 +85,7 @@ names(acc) <- c("boosting", "linear discriminant analysis", "random forest")
 acc
 ```
 
-Since the boosting model had the highest accuracy, we apply it on the 20 test cases.
+Since the boosting model had the highest accuracy, ie, lowest error of 0.03, we apply it on the 20 test cases.
 
 ```{r, cache=TRUE}
 X <- predict(Fitbt, newdata=testcase)
