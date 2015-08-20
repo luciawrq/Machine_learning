@@ -1,0 +1,93 @@
+##Models for Predicting Personal Exercise Manners##
+
+<br>
+
+####Summary####
+
+In this report, we trained several models with the data from accelerometers on the belt, forearm, arm and dumbell, and the models are used to predict personal exercise manners.
+
+<br>
+
+####Data processing####
+
+Loading data and packages, removing unused variables from the data set.
+
+```{r, cache=TRUE}
+library(caret)
+data <- read.csv("pml-training.csv", na.strings=c("", "NA"), header = TRUE)
+testcase <- read.csv("pml-testing.csv", header = TRUE)
+data <- data[, c(8:11, 37:49, 60:68,84:86,102,113:124,140, 151:160)]
+```
+
+Cross validation and spliting data into training and testing set.
+
+```{r, cache=TRUE}
+set.seed(123)
+inTrain <- createDataPartition(y=data$classe, p=0.75, list=FALSE)
+training <- data[inTrain,]
+testing <- data[-inTrain,]
+```
+
+<br>
+
+####Model Building####
+
+Here, we select the following models to apply to the training data set: boosting, linear discriminant analysis and random forest.
+
+```{r, cache=TRUE}
+require(gbm)
+Fitbt <- "Fitbt.Rds"
+if (file.exists(Fitbt)) {
+        Fitbt <- readRDS(Fitbt)
+} else {
+    Fitbt <- train(classe ~., method="gbm", data=training, verbose=FALSE)
+}
+```
+
+```{r, cache=TRUE}
+require(MASS)
+Fitlda <- "Fitlda.Rds"
+if (file.exists(Fitlda)) {
+        Fitlda <- readRDS(Fitlda)
+} else {
+    Fitlda <- train(classe ~., data=training, method="lda")
+}
+```
+
+For random forest, the whole dataset takes too much memory, so here we took a subset of the training data to train the model
+
+```{r, cache=TRUE, results='hide'}
+set.seed(123)
+ss <- sample(1:dim(training)[1], size = 3000, replace =FALSE)
+subtrain <- training[ss,]
+require(randomForest)
+Fitrfsm <- "Fitrfsmall.Rds"
+if (file.exists(Fitrfsm)) {
+        Fitrfsm <- readRDS(Fitrfsm)
+} else {
+    Fitrfsm <- train(classe ~., method="rf", data=subtrain, prox=TRUE)
+}
+
+```
+
+<br>
+
+####Predicting####
+
+Then we apply the models on the testing set to estimate the out of sample error.
+
+```{r, cache=TRUE}
+predbt <- predict(Fitbt, newdata=testing)
+predlda <- predict(Fitlda, newdata=testing)
+predrf <- predict(Fitrfsm, newdata=testing)
+acc <- c(sum(predbt==testing$classe), sum(predlda==testing$classe), sum(predrf==testing$classe))/dim(testing)[1]
+names(acc) <- c("boosting", "linear discriminant analysis", "random forest")
+acc
+```
+
+Since the boosting model had the highest accuracy, we apply it on the 20 test cases.
+
+```{r, cache=TRUE}
+X <- predict(Fitbt, newdata=testcase)
+```
+
